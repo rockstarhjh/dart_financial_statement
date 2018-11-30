@@ -1,8 +1,6 @@
 from os import path
 from os.path import join
-
 import requests
-from astropy.utils.data import download_file
 from bs4 import BeautifulSoup
 import pandas as pd
 import re
@@ -61,7 +59,8 @@ print("회사명: "+company_name+"\n종목코드: "+code)
 
 # dart 사이트의 보고서 목록 url 생성, 여기서 crp_no 가져와야함
 
-start_dt = '20010101'  # 검색시작일
+start_dt = '20021231'  # 검색시작일
+# end_dt = '20031231'  # 검색종료일
 bsn_tp = 'A001'  # 검색할 보고서 종류, A001 = 사업보고서
 fin_rpt = "Y"  # 최종보고서만 검색할 시 Y
 page_set = '100'  # 페이지당 건수(1~100) 기본값 : 10, 최대값 : 100
@@ -88,9 +87,50 @@ for row in a['list']:  # list 키 안에 rcp_no, rpt_nm 등의 값들이 들어�
     bsObj = BeautifulSoup(report_data.content, "html.parser")  # 해당 페이지 데이터는 html 인코딩? 을 통해 beautifulsoup 객체로 가져옴
     fs_find1 = re.compile('\d\.\s연결재무제표["]')   # 정규표현식(re모듈)으로 해당 객체안에서 원하는 텍스트 정보를 얻기위해 정규표현식을 설정
     fs_find2 = re.compile('\d\.\s재무제표["]')
+    fs_find3 = re.compile('\d\.\s연결재무제표에 관한 사항["]')
+    fs_find4 = re.compile('\.\s재무제표 등["]')
     head_lines = bsObj.find('head').text.split("\n")  # 리스트데이터타입
-    print(head_lines)
-    # result = fs_find1.search(head_lines)  # 오류남, re의 search 함수는 인자로 str 타입을 받으나 인자로 리스트(head_lines)를 줬기 때문
+    line_num = 0   # head_lines 리스트에서 정규표현식에 일치하는 인덱스 찾기위한 변수 초기화
+    line_find = 0  # 일치하는 인덱스를 저장하는 변수 초기화
+    # 보고서 페이지 텍스트(head_lines)에서 일치하는 표현식 찾기
+    for head_line in head_lines:
+        if fs_find1.search(head_line):
+            line_find = line_num     # 일치하는 항목이 있으면 그 위치의 인덱스 저장
+            break
+        elif fs_find2.search(head_line):   # 문제점, 재무제표항목이 연결재무제표보다 앞에 있으면 뒤의 연결재무제표를 검색을 안함. 일단 for문을 하나더 만듬
+            line_find = line_num
+            break
+        elif fs_find3.search(head_line):
+            line_find = line_num
+            break
+        elif fs_find4.search(head_line):
+            line_find = line_num
+            break
+        line_num = line_num + 1    # 리스트의 다음인덱스로 변경하여 루프 순환
+
+    line_num2 = 0
+    for head_line in head_lines:
+        if fs_find1.search(head_line):
+            line_find = line_num2
+            break
+        line_num2 = line_num2 + 1
+
+    if line_find != 0:  # 만약 일치하는 항목이 있으면
+        line_words = head_lines[line_find+4].split("'")   # 그 위치를 기준으로 rcp_No 등을 찾음
+        rcpNo = line_words[1]
+        dcmNo = line_words[3]
+        eleId = line_words[5]
+        offset = line_words[7]
+        length = line_words[9]
+        dtd = line_words[11]
+        fs_baseurl = "http://dart.fss.or.kr/report/viewer.do?rcpNo="
+        fs_url = fs_baseurl+rcpNo+"&dcmNo="+dcmNo+"&eleId="+eleId+"&offset="+offset+"&length="+length+"&dtd="+dtd
+        print(fs_url)
+
+    fs_data = requests.get(fs_url)   # 최종얻은 재무제표url에서 페이지 데이터 요청하기
+    bsObj_fs = BeautifulSoup(fs_data.content, "html.parser")   # 요청한 데이터를 html 인코딩?해서 객체에 담기
+    tables = bsObj_fs.findAll("table")   # 페이지안에서 table 태그 찾기
+    print(len(tables))
 
 
 
