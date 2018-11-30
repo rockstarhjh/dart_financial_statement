@@ -1,4 +1,5 @@
 from os import path
+from os.path import join
 
 import requests
 from astropy.utils.data import download_file
