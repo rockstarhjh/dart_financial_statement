@@ -59,7 +59,7 @@ print("회사명: "+company_name+"\n종목코드: "+code)
 
 # dart 사이트의 보고서 목록 url 생성, 여기서 crp_no 가져와야함
 
-start_dt = '20021231'  # 검색시작일
+start_dt = '20081231'  # 검색시작일
 # end_dt = '20031231'  # 검색종료일
 bsn_tp = 'A001'  # 검색할 보고서 종류, A001 = 사업보고서
 fin_rpt = "Y"  # 최종보고서만 검색할 시 Y
@@ -131,6 +131,22 @@ for row in a['list']:  # list 키 안에 rcp_no, rpt_nm 등의 값들이 들어�
     bsObj_fs = BeautifulSoup(fs_data.content, "html.parser")   # 요청한 데이터를 html 인코딩?해서 객체에 담기
     tables = bsObj_fs.findAll("table")   # 페이지안에서 table 태그 찾기
     print(len(tables))
+
+    # 대차대조표, 현금흐름표, 손익계산서의 테이블만 찾기 위해 정규표현식으로 테이블 검색
+    re_income_find = re.compile("법[ \s]*인[ \s]*세[ \s]*비[ \s]*용(\(이익\))*[ \s]*차[ \s]*감[ \s]*전[ \s]*순[ \s]*((이[ \s]*익)|(손[ \s]*실))|법[ \s]*인[ \s]*세[ \s]*차[ \s]*감[ \s]*전[ \s]*계[ \s]*속[ \s]*영[ \s]*업[ \s]*순[ \s]*이[ \s]*익|법인세[ \s]*차감전[ \s]*순이익|법인세차감전계속영업이익|법인세비용차감전이익|법인세비용차감전계속영업[순]*이익|법인세비용차감전당기순이익|법인세(비용차감|손익가감)전순이익|법인세비용차감전[ \s]*계속사업이익|법인세비용차감전순손익")
+    re_cashflow_find = re.compile("영업활동[ \s]*현금[ \s]*흐름|영업활동으로[ \s]*인한[ \s]*[순]*현금[ \s]*흐름|영업활동으로부터의[ \s]*현금흐름|영업활동으로 인한 자산부채의 변동")
+    re_balance_sheet_find = re.compile("현[ \s]*금[ \s]*및[ \s]*현[ \s]*금[ \s]*((성[ \s]*자[ \s]*산)|(등[ \s]*가[ \s]*물))")  # [ \s]* 은 괄호안의 공백이 0개이상존재라는 의미이므로 있든 없든 상관없다는 말
+
+    cnt = 0
+    for table in tables:
+        if re_balance_sheet_find.search(table.text):   # 대차대조표의 테이블 인덱스 찾기
+            table_num = cnt
+            break
+        cnt += 1
+     balance_table = bsObj_fs.findAll("table")[table_num]  #대차대조표의 데이터를 변수에 저장
+
+# 대차대조표의 필요내용 설정 및 저장방법 설정
+
 
 
 
