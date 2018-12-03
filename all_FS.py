@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from os import path
 from os.path import join
 import requests
@@ -6,7 +7,6 @@ import pandas as pd
 import re
 
 from lxml import html
-
 
 # 전자공시 dart의 API 키를 텍스트 파일에서 읽기
 basepath = "F:\study\coding\python\crawling\dart_financial_statement"  # api_key 파일 경로
@@ -59,7 +59,7 @@ print("회사명: "+company_name+"\n종목코드: "+code)
 
 # dart 사이트의 보고서 목록 url 생성, 여기서 crp_no 가져와야함
 
-start_dt = '20021231'  # 검색시작일
+start_dt = '20081231'  # 검색시작일
 # end_dt = '20031231'  # 검색종료일
 bsn_tp = 'A001'  # 검색할 보고서 종류, A001 = 사업보고서
 fin_rpt = "Y"  # 최종보고서만 검색할 시 Y
@@ -130,50 +130,62 @@ for row in a['list']:  # list 키 안에 rcp_no, rpt_nm 등의 값들이 들어�
     fs_data = requests.get(fs_url)   # 최종얻은 재무제표url에서 페이지 데이터 요청하기
     bsObj_fs = BeautifulSoup(fs_data.content, "html.parser")   # 요청한 데이터를 html 인코딩?해서 객체에 담기
     tables = bsObj_fs.findAll("table")   # 페이지안에서 table 태그 찾기
-    print(len(tables))
 
+    # 대차대조표, 손익계산서, 현금흐름표에 대한 테이블을 찾기위한 정규표현식 설정
+    re_income_find = re.compile("법[ \s]*인[ \s]*세[ \s]*비[ \s]*용(\(이익\))*[ \s]*차[ \s]*감[ \s]*전[ \s]*순[ \s]*((이[ \s]*익)|(손[ \s]*실))|법[ \s]*인[ \s]*세[ \s]*차[ \s]*감[ \s]*전[ \s]*계[ \s]*속[ \s]*영[ \s]*업[ \s]*순[ \s]*이[ \s]*익|법인세[ \s]*차감전[ \s]*순이익|법인세차감전계속영업이익|법인세비용차감전이익|법인세비용차감전계속영업[순]*이익|법인세비용차감전당기순이익|법인세(비용차감|손익가감)전순이익|법인세비용차감전[ \s]*계속사업이익|법인세비용차감전순손익")
+    re_cashflow_find = re.compile("영업활동[ \s]*현금[ \s]*흐름|영업활동으로[ \s]*인한[ \s]*[순]*현금[ \s]*흐름|영업활동으로부터의[ \s]*현금흐름|영업활동으로 인한 자산부채의 변동")
+    re_balance_sheet_find = re.compile("현[ \s]*금[ \s]*및[ \s]*현[ \s]*금[ \s]*((성[ \s]*자[ \s]*산)|(등[ \s]*가[ \s]*물))")   #  [ \s]* 은 빈공백이 0개이상 있다는 의미, 따라서 공백이 있거나 없거나 임.
 
+    # 정규표현식과 일치하는 테이블 찾기
+    cnt = 0  #테이블 변수 초기화
+    table_balance_num = 0
+    # 대차대조표 찾기
+    for table in tables:
+        if re_balance_sheet_find.search(table.text):  # 만약 전체 재무제표테이블안에서 대차대조표의 정규표현식과 일치하는 테이블이 있다면
+            table_balance_num = cnt
+            break
+        cnt += 1
+    balance_table = bsObj_fs.findAll("table")[table_balance_num]
 
+    # 손익계산서 찾기
+    cnt = 0
+    table_income_num = 0
+    for table in tables:
+        if re_income_find.search(table.text):  # 만약 전체 재무제표테이블안에서 손익계산서의 정규표현식과 일치하는 테이블이 있다면
+            table_income_num = cnt
+            break
+        cnt += 1
+    income_table = bsObj_fs.findAll("table")[table_income_num]
+    # 현금흐름표 테이블 찾기
+    cnt = 0
+    table_cashflow_num = 0
+    for table in tables:
+        if re_cashflow_find.search(table.text):  # 만약 전체 재무제표테이블안에서 손익계산서의 정규표현식과 일치하는 테이블이 있다면
+            table_cashflow_num = cnt
+            break
+        cnt += 1
+    cashflow_table = bsObj_fs.findAll("table")[table_cashflow_num]
 
-# #카운터 선정
-# n = 1
-# for key, value in urldict.items():
-#     # dcm_no 값을 알아야 다운로드 링크에 접근할 수 있는데, 알 방법이 링크에서 바로 가져오는 방법밖에 없으므로 xpath을 활용해서 알아봅시다
-#     test = requests.get(value, headers=headers)
-#     tree = html.fromstring(test.content)
-#     testpath = tree.xpath('//*[@id="north"]/div[2]/ul/li[1]/a/@onclick')[0]
-#     print(testpath)
-#     dcm_no = testpath.split(", '")[1].split("')")[0]
-#     # print(dcm_no)
-#
-#     # 다운로드를 위한 url은 보고서 url과 차이점이 몇 가지 있는데, replace를 통해 추가할 수 있어요
-#     download_url = value.replace('dsaf001', 'pdf/download').replace('rcpNo', 'rcp_no') + "&dcm_no=" + dcm_no
-#     print(key + " " + download_url + " Downloading... " + str(n) + " out of " + str(len(urldict)))
-#
-#     # dcm_no를 구했던 것과 같은 방법으로 첨부파일 다운로드 url을 추출합니다
-#     dtest = requests.get(download_url, headers=headers)
-#     dtree = html.fromstring(dtest.text)
+    table_num = [table_balance_num, table_income_num, table_cashflow_num]
+    # 단위 검색 및 설정
+    re_unit1 = re.compile('단위[ \s]*:[ \s]*원')
+    re_unit2 = re.compile('단위[ \s]*:[ \s]*백만원')
+    re_unit3 = re.compile('단위[ \s]*:[ \s]*천원')
 
-    # \d\.\s연결재무제표["]
-
-
-    # # 각 보고서 당 복수의 첨부파일이 존재하는데, 첨부파일 이름과 함께 저장하기 위해 downloadpath라는 dict를 사용했습니다
-    # downloadpath = {}
-    # keys = dtree.xpath('/html/body/div/div/table/tr/td[1]/text()')
-    # key_links = dtree.xpath('/html/body/div/div/table/tr/td/a/@href')
-    # for key2, link in zip(keys, key_links):
-    #     l = "http://dart.fss.or.kr" + link
-    #     k = key2.replace(")", "").replace("(", "_")
-    #     downloadpath[k] = l
-    #     # print(k)
-    #
-    # # utils에 있는 download_file을 이용해 디렉토리를 만들고 그 안에다가 파일을 집어넣습니다
-    # for key2, link in downloadpath.items():
-    #     # download_file(link, filename=key2, directory="dart_" + company_name + "/" + key)
-    #     requests.urlretrieve(url, key2)
-    #
-    # n += 1
-
-
-
-
+    i = 0
+    unit = []
+    for num in table_num:
+        # 원
+        if len(bsObj_fs.findAll("table")[num - 1](string=re_unit1)) != 0:
+            unit.append(100000000.0)
+            unit_find = 1
+        # 백만원
+        elif len(bsObj_fs.findAll("table")[num - 1](string=re_unit2)) != 0:
+            unit.append(100.0)
+            unit_find = 1
+        # 천원
+        elif len(bsObj_fs.findAll("table")[num - 1](string=re_unit3)) != 0:
+            unit.append(100000.0)
+            unit_find = 1
+        i += 1
+    print(unit)
