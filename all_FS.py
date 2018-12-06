@@ -7,7 +7,8 @@ import pandas as pd
 import re
 
 from lxml import html
-
+#main 함수
+# def main():
 # 전자공시 dart의 API 키를 텍스트 파일에서 읽기
 basepath = "F:\study\coding\python\crawling\dart_financial_statement"  # api_key 파일 경로
 filepath = path.abspath(path.join(basepath,  "api_key.txt"))
@@ -59,7 +60,7 @@ print("회사명: "+company_name+"\n종목코드: "+code)
 
 # dart 사이트의 보고서 목록 url 생성, 여기서 crp_no 가져와야함
 
-start_dt = '20081231'  # 검색시작일
+start_dt = '20081231'  # 검색시작일 20081231 20010101
 # end_dt = '20031231'  # 검색종료일
 bsn_tp = 'A001'  # 검색할 보고서 종류, A001 = 사업보고서
 fin_rpt = "Y"  # 최종보고서만 검색할 시 Y
@@ -174,6 +175,7 @@ for row in a['list']:  # list 키 안에 rcp_no, rpt_nm 등의 값들이 들어�
 
     i = 0
     unit = []
+    # 각기 다른 단위를 억 단위로 만들기
     for num in table_num:
         # 원
         if len(bsObj_fs.findAll("table")[num - 1](string=re_unit1)) != 0:
@@ -189,3 +191,122 @@ for row in a['list']:  # list 키 안에 rcp_no, rpt_nm 등의 값들이 들어�
             unit_find = 1
         i += 1
     print(unit)
+
+
+#  원하는 테이블(대차대조표, 손익계산서, 현금흐름표)에서 찾고자하는 항목 설정(정규표현식 리스트) 및 검색 기능
+re_balance_list = []
+# 유동자산 정규표현식
+re_asset_current = re.compile("^유[ \s]*동[ \s]*자[ \s]*산([ \s]*합[ \s]*계)*|\.[ \s]*유[ \s]*동[ \s]*자[ \s]*산([ \s]*합[ \s]*계)*")
+re_asset_current_sub1 = re.compile("현[ \s]*금[ \s]*및[ \s]*현[ \s]*금[ \s]*((성[ \s]*자[ \s]*산)|(등[ \s]*가[ \s]*물))")
+re_asset_current_sub2 = re.compile("매[ \s]*출[ \s]*채[ \s]*권[ \s]([ \s]*및[ \s]*기[ \s]*타[ \s]*유[ \s]*동[ \s]*채[ \s]*권[ \s]*|[ \s]*및[ \s]*기[ \s]*타[ \s]*채[ \s]*권[ \s])*")
+re_asset_current_sub3 = re.compile("재[ \s]*고[ \s]*자[ \s]*산")
+# re_asset_current_sub4 = re.compile("단[ \s]*기[ \s]*금[ \s]*융[ \s]*자[ \s]*산|기[ \s]*타[ \s]*유[ \s]*동[ \s]*금[ \s]*융[ \s]*자[ \s]*산|단[ \s]*기[ \s]*금[ \s]*융[ \s]*상[ \s]*품")
+# re_asset_current_sub5 = re.compile("당[ \s]*기[ \s]*법[ \s]*인[ \s]*세[ \s]*자[ \s]*산")
+# re_asset_current_sub6 = re.compile("기[ \s]*타[ \s]*유[ \s]*동[ \s]*자[ \s]*산")
+# 비유동자산 정규표현식
+re_asset_non_current = re.compile("비[ \s]*유[ \s]*동[ \s]*자[ \s]*산|고[ \s]*정[ \s]*자[ \s]*산([ \s]*합[ \s]*계)*")
+re_asset_non_current_sub1 = re.compile("유[ \s]*형[ \s]*자[ \s]*산")
+re_asset_non_current_sub2 = re.compile("무[ \s]*형[ \s]*자[ \s]*산")
+# re_asset_non_current_sub3 = re.compile("투[ \s]*자[ \s]*부[ \s]*동[ \s]*산")
+# re_asset_non_current_sub4 = re.compile("기[ \s]*타[ \s]([ \s]*의[ \s])*비[ \s]*유[ \s]*동[ \s]*금[ \s]*융[ \s]*자[ \s]*산|기[ \s]*타[ \s]*금[ \s]*융[ \s]*자[ \s]*산")
+# re_asset_non_current_sub5 = re.compile("기[ \s]*타[ \s]*비[ \s]*유[ \s]*동[ \s]*자[ \s]*산")
+
+re_asset_sum = re.compile("자[ \s]*산[ \s]*총[ \s]*계([ \s]*합[ \s]*계)*")
+# 유동부채 정규표현식
+re_liability_current = re.compile("^유[ \s]*동[ \s]*부[ \s]*채([ \s]*합[ \s]*계)*|\.[ \s]*유[ \s]*동[ \s]*부[ \s]*채([ \s]*합[ \s]*계)*")
+re_liability_current_sub1 = re.compile("매[ \s]*입[ \s]*채[ \s]*무[ \s]([ \s]*및[ \s]*기[ \s]*타([ \s]*유[ \s]*동[ \s])*채[ \s]*무)")
+re_liability_current_sub2 = re.compile("단[ \s]*기[ \s]*차[ \s]*입[ \s]*금([ \s]*및[ \s]*유[ \s]*동[ \s]*성[ \s]*장[ \s]*기[ \s]*부[ \s]*채[ \s])|단[ \s]*기[ \s]*금[ \s]*융[ \s]*부[ \s]*채")
+# re_liability_current_sub3 = re.compile("(유[ \s]*동[ \s]*성[ \s])*충[ \s]*당[ \s]*부[ \s]*채[ \s]")
+# re_liability_current_sub4 = re.compile("기[ \s]*타[ \s]*유[ \s]*동[ \s]*부[ \s]*채")
+# 비유동부채 정규표현식
+re_liability_non_current = re.compile("^비[ \s]*유[ \s]*동[ \s]*부[ \s]*채|\.[ \s]*비[ \s]*유[ \s]*동[ \s]*부[ \s]*채|고[ \s]*정[ \s]*부[ \s]*채")
+re_liability_non_current_sub1 = re.compile("사[ \s]*채[ \s]*")
+re_liability_non_current_sub2 = re.compile("장[ \s]*기[ \s]*차[ \s]*입[ \s]*금")
+re_liability_non_current_sub3 = re.compile("이[ \s]*연[ \s]*법[ \s]*인[ \s]*세[ \s]*부[ \s]*채")
+# re_liability_non_current_sub4 = re.compile("확[ \s]*정[ \s]*급[ \s]*여[ \s]*부[ \s]*채")
+re_liability_sum = re.compile("^부[ \s]*채[ \s]*총[ \s]*계([ \s]*합[ \s]*계)*|\.[ \s]*부[ \s]*채[ \s]*총[ \s]*계([ \s]*합[ \s]*계)*")
+# 자본 정규표현식
+re_equity_parent = re.compile("지[ \s]*배[ \s]*기[ \s]*업([ \s]*의)*[ \s]*소[ \s]*유")
+re_equity_non_parent = re.compile("비[ \s]*지[ \s]*배[ \s]*지[ \s]*분")
+re_equity_sub1 = re.compile("자[ \s]*본[ \s]*금")
+re_equity_sub2 = re.compile("주[ \s]*식[ \s]*발[ \s]*행[ \s]*초[ \s]*과[ \s]*금")
+re_equity_sub3 = re.compile("자[ \s]*본[ \s]*잉[ \s]*여[ \s]*금")
+re_equity_sub4 = re.compile("이[ \s]*익[ \s]*잉[ \s]*여[ \s]*금")
+re_equity_sum = re.compile("^자[ \s]*본[ \s]*총[ \s]*계([ \s]*합[ \s]*계)*|\.[ \s]*자[ \s]*본[ \s]*총[ \s]*계([ \s]*합[ \s]*계)*")
+
+re_balance_list.append(re_asset_current)
+re_balance_list.append(re_asset_current_sub1)
+re_balance_list.append(re_asset_current_sub2)
+re_balance_list.append(re_asset_current_sub3)
+# re_balance_list.append(re_asset_current_sub4)
+# re_balance_list.append(re_asset_current_sub5)
+# re_balance_list.append(re_asset_current_sub6)
+re_balance_list.append(re_asset_non_current)
+re_balance_list.append(re_asset_non_current_sub1)
+re_balance_list.append(re_asset_non_current_sub2)
+# re_balance_list.append(re_asset_non_current_sub3)
+# re_balance_list.append(re_asset_non_current_sub4)
+# re_balance_list.append(re_asset_non_current_sub5)
+re_balance_list.append(re_asset_sum)
+re_balance_list.append(re_liability_current)
+re_balance_list.append(re_liability_current_sub1)
+re_balance_list.append(re_liability_current_sub2)
+# re_balance_list.append(re_liability_current_sub3)
+# re_balance_list.append(re_liability_current_sub4)
+re_balance_list.append(re_liability_non_current)
+re_balance_list.append(re_liability_non_current_sub1)
+re_balance_list.append(re_liability_non_current_sub2)
+re_balance_list.append(re_liability_non_current_sub3)
+# re_balance_list.append(re_liability_non_current_sub4)
+re_balance_list.append(re_liability_sum)
+re_balance_list.append(re_equity_parent)
+re_balance_list.append(re_equity_non_parent)
+re_balance_list.append(re_equity_sub1)
+re_balance_list.append(re_equity_sub2)
+re_balance_list.append(re_equity_sub3)
+re_balance_list.append(re_equity_sub4)
+re_balance_list.append(re_equity_sum)
+
+# 대차대조표의 테이블 텍스트 가져와서 정규표현식과 비교하기
+trs = balance_table.findAll("tr")
+
+
+# 테이블 내의 수치를 int 타입으로 변환
+def find_value(text, unit):
+    return int(text.replace(" ", "").replace("△", "-").replace("(-)", "-").replace("(", "-").replace(")", "").replace(",", "").replace("=", "")) / unit
+
+
+# 대차대조표
+
+# 대차대조표 테이블 안에서 정규표현식 항목에 맞는 것을 찾고 그 금액값 입력하기
+for tr in trs:
+    tds = tr.findAll("td")  # 각 행마다 루프를 돌면서 각 열의 데이터 찾기
+
+    if len(tds) != 0:  # 각 행마다 열이 존재한다면,
+
+        for i in range(len(re_balance_list)): # 찾고자하는 정규표현식 리스트의 개수만큼 루프돌리기
+
+            if re_balance_list[i].search(tds[0].text.strip()): # 정규표현식 리스트의 내용과 일치하는 행(첫열)이 있다면
+                if len(tds) > 4:
+                    if (tds[1].text.strip() != "") and (tds[1].text.strip() != "-"):  # 열이 4열이상이면 값이 있는 것을 찾아 넣기
+                        value = find_value(tds[1].text.strip(), unit[0])
+                        break
+                    elif (tds[2].text.strip() != "") and (tds[2].text.strip() != "-"):  # 빈 공백이거나 "-"로 표시하지 않았다면
+                        value = find_value(tds[2].text.strip(), unit[0])
+                        break
+                else:
+                    if (tds[1].text.strip() != "") and (tds[1].text.strip() != "-"):  # 두번째 열부터 금액이므로 두번째 열이 비어있지 않다면 값을 변수에 저장
+                        value = find_value(tds[1].text.strip(), unit[0])
+                        break
+                print(value)
+
+
+
+
+
+
+# 우선 마지막 데이터 url 만 저장되어서 검색하는것을 전부로 변경, main 함수 마지막에 저장관련 기능 넣으면 될듯
+
+
+
+
