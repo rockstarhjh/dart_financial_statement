@@ -8,7 +8,13 @@ import re
 
 from lxml import html
 
-# 테이블 내의 수치를 int 타입으로 변환
+# 엑셀에 조회한 재무제표 값을 넣기
+# 엑셀파일이름(종목), 년도, 보고서링크, 대차대조표, 손익계산서, 현금흐름표 내용
+def write_fs_to_excel():
+
+
+
+# 재무제표 테이블 내의 수치를 int 타입으로 변환
 def find_value(text, unit):
     return int(text.replace(" ", "").replace("△", "-").replace("(-)", "-").replace("(", "-").replace(")", "").replace(",", "").replace("=", "")) / unit
 
@@ -18,7 +24,11 @@ def scrape_balance_sheet(balance_table, year, unit):
     #  원하는 테이블(대차대조표, 손익계산서, 현금흐름표)에서 찾고자하는 항목 설정(정규표현식 리스트) 및 검색 기능
     re_balance_list = []
     # 대차대조표
-    # 유동자산 정규표현식
+
+    # 추가검토요소
+    # 유동금융자산/투자부동산/장기금융자산/유동성장기부채/비유동금융부채
+
+   # 유동자산 정규표현식
     re_asset_current = re.compile("^((.)*\.)*[\ s]*유[ \s]*동[ \s]*자[ \s]*산([ \s]*합[ \s]*계)*|\.[ \s]*유[ \s]*동[ \s]*자[ \s]*산([ \s]*합[ \s]*계)*")
     re_asset_current_sub1 = re.compile("^((.)*\.)*[\ s]*현[ \s]*금[ \s]*및[ \s]*현[ \s]*금[ \s]*((성[ \s]*자[ \s]*산)|(등[ \s]*가[ \s]*물))")
     re_asset_current_sub2 = re.compile("^((.)*\.)*[\ s]*매[ \s]*출[ \s]*채[ \s]*권([ \s]*및[ \s]*기[ \s]*타[ \s]*유[ \s]*동[ \s]*채[ \s]*권[ \s]*|[ \s]*및[ \s]*기[ \s]*타[ \s]*채[ \s]*권[ \s])*")
@@ -310,9 +320,129 @@ def scrape_income_sheet(income_table, year, unit):
         income_sheet_sub_list["stock_income_sub1"] = income_sheet_sub_list["stock_income_sub1"] * unit  # 기본주당이익은 단위가 원이므로
     return income_sheet_sub_list
 
+# 현금흐름표 크롤링
+def scrape_cashflow_sheet(cashflow_table, year, unit):
+    # 분류가 회사마다보고서마다 너무 달라서 일단 보류!! ##는 일단 보류.
+
+    # 영업활동으로인한 현금흐름/영업활동 현금흐름
+    # 영업에서 창출된 현금흐름/영업에서 창출된 현금/영업으로부터 창출된 현금흐름
+    # 당기순이익/연결당기순이익/당기순이익(손실)
+    ## 감가상각비
+
+    # 투자활동으로 인한 현금흐름/투자활동 현금흐름
+    # 투자활동으로 인한 현금유입액
+    # 투자활동으로 인한 현금유출액
+    ## 기타금융자산(유동)의 순증감/단기금융상품의 순감소(증가)
+    ## 기타금융자산(비유동)의 감소/장기금융상품의 처분
+    ## 기타채권의 감소
+    # 유형자산의 처분
+    # 무형자산의 처분
+    ## 기타금융자산(비유동)의 증가
+    # 유형자산의 취득
+    # 무형자산의 취득
+    ## 기타 투자활동으로 인한 현금유출입액
+
+    # 재무활동으로 인한 현금흐름/재무활동 현금흐름
+    ## 단기차입금의 순증감/단기차입금의 순증가(감소)
+    ## 장기차입금 및 사채의 차입/사채 및 장기차입금의 차입
+    ## 장기차입금 및 사채의 상환/사채 및 장기차입금의 상환
+    # 배당금의 지급/배당금 지급
+    ## 기타 재무활동으로 인한 현금유출입액
+
+    # 현금및현금성자산의순증가/현금및현금성자산의 증가(감소)/현금및현금성자산의순증감
+    # 기초의 현금및현금성자산/기초 현금 및 현금성자산
+    # 기말의 현금및현금성자산/기말 현금 및 현금성자산
+
+    re_cashflow_list = []
+    re_op_cashflow = re.compile("^((.)*\.)*[\s]*((영[ \s]*업[\s]*활[\s]*동[\s]*)|(영업활동으로[\s]*인한)|(영업활동으로부터의))[\s]*([순]*현금[\s]*흐름)")
+    re_op_cashflow_sub1 = re.compile("^((.)*\.)*[\s]*((영업에서)|(영업으로부터))[\s]*창출된[\s]*현금(흐름)*")
+    re_op_cashflow_sub2 = re.compile("^((.)*\.)*[\s]*(연[ \s]*결[ \s]*)*당[ \s]*기[ \s]*순[ \s]*((이[ \s]*익)|(손[ \s]*익))[\s]*(\(손실\))*")
+    re_invest_cashflow = re.compile("^((.)*\.)*[\s]*투자[\s]*활동[\s]*(으[\s]*로[\s]*인[\s]*한[\s]*)*[순]*현[\s]*금[\s]*흐[\s]*름")
+    re_invest_cashflow1 = re.compile("^((.)*\.)*[\s]*투자[\s]*활동[\s]*(으[\s]*로[\s]*인[\s]*한[\s]*)*현[\s]*금[\s]*유[\s]*입[\s]*액[\s]*")
+    re_invest_cashflow2 = re.compile("^((.)*\.)*[\s]*투자[\s]*활동[\s]*(으[\s]*로[\s]*인[\s]*한[\s]*)*현[\s]*금[\s]*유[\s]*출[\s]*액[\s]*")
+
+    re_financial_cashflow = re.compile("^((.)*\.)*[\s]*재무[\s]*활동[\s]*(으[\s]*로[\s]*인[\s]*한[\s]*)*[순]*현[\s]*금[\s]*흐[\s]*름")
+    re_financial_cashflow_sub1 = re.compile("^((.)*\.)*[\s]*배당금[ \s]*지급|현금배당금의[ \s]*지급|배당금의[ \s]*지급|현금배당|보통주[ ]*배당[ ]*지급")
+
+    re_cash_diff = re.compile("^((.)*\.)*[\s]*현금[ \s]*및[\s]*현금[ \s]*성[ \s]*자산[ \s]*의[ \s]*(순증가|증가\(감소\)|순증감|증가)")
+    re_start_cash = re.compile("^((.)*\.)*[\s]*기초[\s]*현금[\s]*및[\s]*현금성[ ]*자산|기초의[ \s]*현금[ \s]*및[ \s]*현금성[ \s]*자산|기[ \s]*초[ \s]*의[ \s]*현[ \s]*금|기[ \s]*초[ \s]*현[ \s]*금")
+    re_end_cash = re.compile("^((.)*\.)*[\s]*기말[\s]*현금[\s]*및[\s]*현금성[ ]*자산|기말의[ \s]*현금[ \s]*및[ \s]*현금성[ \s]*자산|기[ \s]*말[ \s]*의[ \s]*현[ \s]*금|기[ \s]*말[ \s]*현[ \s]*금")
+
+    re_cashflow_list.append(re_op_cashflow)
+    re_cashflow_list.append(re_op_cashflow_sub1)
+    re_cashflow_list.append(re_op_cashflow_sub2)
+    re_cashflow_list.append(re_invest_cashflow)
+    re_cashflow_list.append(re_invest_cashflow1)
+    re_cashflow_list.append(re_invest_cashflow2)
+    re_cashflow_list.append(re_financial_cashflow)
+    re_cashflow_list.append(re_financial_cashflow_sub1)
+    re_cashflow_list.append(re_cash_diff)
+    re_cashflow_list.append(re_start_cash)
+    re_cashflow_list.append(re_end_cash)
+
+    cashflow_sheet_key_list = []
+    cashflow_sheet_key_list.append("op_cashflow")
+    cashflow_sheet_key_list.append("op_cashflow_sub1")
+    cashflow_sheet_key_list.append("op_cashflow_sub2")
+    cashflow_sheet_key_list.append("invest_cashflow")
+    cashflow_sheet_key_list.append("invest_cashflow1")
+    cashflow_sheet_key_list.append("invest_cashflow2")
+    cashflow_sheet_key_list.append("financial_cashflow")
+    cashflow_sheet_key_list.append("financial_cashflow_sub1")
+    cashflow_sheet_key_list.append("cash_diff")
+    cashflow_sheet_key_list.append("start_cash")
+    cashflow_sheet_key_list.append("end_cash")
+
+    cashflow_sheet_sub_list = {}
+    cashflow_sheet_sub_list['year'] = year+"년"
+    cashflow_sheet_sub_list['op_cashflow'] = 0.0
+    cashflow_sheet_sub_list['op_cashflow_sub1'] = 0.0
+    cashflow_sheet_sub_list['op_cashflow_sub2'] = 0.0
+    cashflow_sheet_sub_list['invest_cashflow'] = 0.0
+    cashflow_sheet_sub_list['invest_cashflow1'] = 0.0
+    cashflow_sheet_sub_list['invest_cashflow2'] = 0.0
+    cashflow_sheet_sub_list['financial_cashflow'] = 0.0
+    cashflow_sheet_sub_list['financial_cashflow_sub1'] = 0.0
+    cashflow_sheet_sub_list['cash_diff'] = 0.0
+    cashflow_sheet_sub_list['start_cash'] = 0.0
+    cashflow_sheet_sub_list['end_cash'] = 0.0
+
+    # 현금흐름표의 테이블 텍스트 가져와서 정규표현식과 비교하기
+    trs = cashflow_table.findAll("tr")
+
+    # 손익계산서 테이블 안에서 정규표현식 항목에 맞는 것을 찾고 그 금액값 입력하기
+    for tr in trs:
+        tds = tr.findAll("td")  # 각 행마다 루프를 돌면서 각 열의 데이터 찾기
+        if len(tds) != 0:  # 각 행마다 열이 존재한다면,
+            value = 0.0
+            for i in range(len(re_cashflow_list)):  # 찾고자하는 정규표현식 리스트의 개수만큼 루프돌리기
+
+                if re_cashflow_list[i].search(tds[0].text.strip()):  # 정규표현식 리스트의 내용과 일치하는 행(첫열)이 있다면
+                    # print("i : ",  i,  "result : ", bool(re_income_list[i].search(tds[0].text.strip())), re_income_list[i], tds[0].text.strip())  # 정규표현식 에러(실수) 확인용
+                    if len(tds) > 4:
+                        if (tds[1].text.strip() != "") and (tds[1].text.strip() != "-"):  # 열이 4열이상이면 값이 있는 것을 찾아 넣기
+                            value = find_value(tds[1].text.strip(), unit)
+                            # print(value)
+                            break
+                        elif (tds[2].text.strip() != "") and (tds[2].text.strip() != "-"):  # 빈 공백이거나 "-"로 표시하지 않았다면
+                            value = find_value(tds[2].text.strip(), unit)
+                            # print(value)
+                            break
+                    else:
+                        if (tds[1].text.strip() != "") and (
+                                tds[1].text.strip() != "-"):  # 두번째 열부터 금액이므로 두번째 열이 비어있지 않다면 값을 변수에 저장
+                            value = find_value(tds[1].text.strip(), unit)
+                            # print(value)
+                            break
+            if value != 0.0 and cashflow_sheet_sub_list[cashflow_sheet_key_list[i]] == 0.0:
+                cashflow_sheet_sub_list[cashflow_sheet_key_list[i]] = value  # income_sheet_key_list[i]랑 re_income_list 를 일치시켜 year는 상관없음
+    return cashflow_sheet_sub_list
 
 
-#main 함수
+
+
+
+# main 함수
 # def main():
 # 전자공시 dart의 API 키를 텍스트 파일에서 읽기
 basepath = "F:\study\coding\python\crawling\dart_financial_statement"  # api_key 파일 경로
@@ -321,6 +451,12 @@ with open(filepath, 'r') as f:
     API_KEY = f.read()
 
 # print(API_KEY)
+
+# 년도마다 담을 재무제표 딕셔너리
+balance_sheet_list = {}
+income_sheet_list = {}
+cashflow_sheet_list = {}
+
 
 # 종목코드 저장한 엑셀파일 불러오기(엑셀출처:[한국거래소 전자공시 홈페이지](http://kind.krx.co.kr/corpgeneral/corpList.do?method=loadInitPage))
 
@@ -365,7 +501,7 @@ print("회사명: "+company_name+"\n종목코드: "+code)
 
 # dart 사이트의 보고서 목록 url 생성, 여기서 crp_no 가져와야함
 
-start_dt = '20171201'  # 검색시작일 20081231 20010101
+start_dt = '20111201'  # 검색시작일 20081231 20010101
 # end_dt = '20031231'  # 검색종료일
 bsn_tp = 'A001'  # 검색할 보고서 종류, A001 = 사업보고서
 fin_rpt = "Y"  # 최종보고서만 검색할 시 Y
@@ -496,10 +632,12 @@ for row in a['list']:  # list 키 안에 rcp_no, rpt_nm 등의 값들이 들어�
             unit.append(100000.0)
             unit_find = 1
         i += 1
-    print(unit)
+    # print(unit)
 
-balance_sheet_list = scrape_balance_sheet(balance_table, year, unit[0])
-income_sheet_list = scrape_income_sheet(income_table, year, unit[1])
+
+    balance_sheet_list[year+"년"] = scrape_balance_sheet(balance_table, year, unit[0])
+    income_sheet_list[year+"년"] = scrape_income_sheet(income_table, year, unit[1])
+    cashflow_sheet_list[year+"년"] = scrape_cashflow_sheet(cashflow_table, year, unit[2])
 
 
 
