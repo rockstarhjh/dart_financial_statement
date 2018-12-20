@@ -14,28 +14,50 @@ from lxml import html
 
 # 엑셀에 조회한 재무제표 값을 넣기
 # 엑셀파일이름(종목), 년도, 보고서링크, 대차대조표, 손익계산서, 현금흐름표 내용
-def write_fs_to_excel(balance_sheet_list):
-    # wb = Workbook()
-    # file_name = company_name+".xlsx"
-    # file = file_path+file_name
-    # wb.save(file)
+def write_fs_to_excel(sheet_list, company_name):
+    sheet_list[0].reverse()  # 대차대조표 년도 순으로 재배열
+    sheet_list[1].reverse()  # 손익계산서 년도 순으로 재배열
+    sheet_list[2].reverse()  # 현금흐름표 년도 순으로 재배열
+    # 만들고자하는 데이터프레임의 행의 항목 설정
+    balance_rows = ["결산년도", "유동자산", "현금 및 현금성 자산", "매출채권", '재고자산', '비유동자산', '유형자산', '무형자산', '자산총계', '유동부채', '단기매입채무',
+                    '단기차입금', '비유동부채', '사채', '장기차입금', '장기매입채무', '이연법인세부채', '부채총계', '지배기업 소유지분', '비지배지분', '자본금',
+                    '주식발행초과금', '자본잉여금', '이익잉여금', '자본총계']
+    income_rows = ["결산년도", "매출액", "매출원가", "매출총이익", '판매비와관리비', '영업이익', '기타수익', '기타비용', '금융수익', '금융비용', '법인세비용차감전순이익',
+                   '법인세비용', '당기순이익', '기본주당이익', '보통주주당이익', '우선주주당이익']
+    cashflow_rows = ["결산년도", "영업활동현금흐름", "영업에서창출된현금", "당기순이익", "투자활동으로인한현금흐름", '투자활동으로인한 현금유입액', '투자활동으로인한 현금유출액',
+                     '재무활동현금흐름', '배당금지급', '현금및현금성자산의순증가', '기초현금및현금성자산', '기말현금및현금성자산']
+    sheet_columns = []  # 데이터프레임의 열항목 설정
 
-    balance_rows = ["유동자산", "현금 및 현금성 자산", "매출채권", '재고자산', '비유동자산', '유형자산', '무형자산', '자산총계', '유동부채', '단기매입채무', '단기차입금', '비유동부채', '사채', '장기차입금', '장기매입채무', '이연법인세부채', '부채총계', '지배기업 소유지분', '비지배지분', '자본금', '주식발행초과금', '자본잉여금', '이익잉여금', '자본총계' ]
-    balance_columns = []
-    # df = pd.DataFrame(index=balance_rows, columns=balance_columns)
-    # df.to_excel("result.xlsx", sheet_name="balance sheet", index_label='결산년도')
-    i = 0
-    for index in balance_sheet_list:
-        # print(index)
-        balance_columns.append(balance_sheet_list[i]['year'])
-        print(i)
-        i += 1
-    balance_columns.reverse()
-    print(balance_columns)
-    df = pd.DataFrame(index=balance_rows, columns=balance_columns)
+    for i in range(len(sheet_list[0])):  # 데이터프레임에 들어갈 열 개수 설정
+        # print(i)
+        sheet_columns.append(i)
 
-    print(df)
-    # df.to_excel("result.xlsx", sheet_name="balance sheet", index_label='결산년도')
+    df_balance = pd.DataFrame(index=balance_rows, columns=sheet_columns)  # 행, 열 기준으로 데이터프레임 생성
+    df_income = pd.DataFrame(index=income_rows, columns=sheet_columns)  # 행, 열 기준으로 데이터프레임 생성
+    df_cashflow = pd.DataFrame(index=cashflow_rows, columns=sheet_columns)  # 행, 열 기준으로 데이터프레임 생성
+
+    # k = 0
+    for k in range(len(sheet_list)):
+        # print(list)
+
+        # 데이터프레임에 값 채워넣기
+        i = 0
+        for index in sheet_list[k]:  # 대차대조표 년도 별 반복문 생성 index는 년도별 데이터 전체임
+            j = 0
+            for key in sheet_list[k][i]:  # 각 년도별 데이터안에서 항목별 데이터에 접근
+                if k == 0:
+                    df_balance.iloc[j][i] = sheet_list[k][i][key]  # iloc 이용해서 데이터프레임에 각 년도에 따른 항목데이터값 넣기
+                elif k == 1:
+                    df_income.iloc[j][i] = sheet_list[k][i][key]  # iloc 이용해서 데이터프레임에 각 년도에 따른 항목데이터값 넣기
+                else:
+                    df_cashflow.iloc[j][i] = sheet_list[k][i][key]  # iloc 이용해서 데이터프레임에 각 년도에 따른 항목데이터값 넣기
+                j += 1
+            i += 1
+        # k += 1
+    writer = pd.ExcelWriter("F:\study\주식\재무제표\\" + company_name + ".xlsx", engine='xlsxwriter')
+    df_balance.to_excel(writer, sheet_name="balance sheet", header=False)
+    df_income.to_excel(writer, sheet_name="income sheet", header=False)
+    df_cashflow.to_excel(writer, sheet_name="cashflow sheet", header=False)
 
 
 # 재무제표 테이블 내의 수치를 int 타입으로 변환
@@ -477,10 +499,11 @@ with open(filepath, 'r') as f:
 
 # print(API_KEY)
 
-# 년도마다 담을 재무제표 딕셔너리
+# 년도마다 담을 재무제표 리스트
 balance_sheet_list = []
 income_sheet_list = []
 cashflow_sheet_list = []
+sheet_list = []  # 대차대조표,현금흐르표,손익계산서 담을 리스트
 
 
 # 종목코드 저장한 엑셀파일 불러오기(엑셀출처:[한국거래소 전자공시 홈페이지](http://kind.krx.co.kr/corpgeneral/corpList.do?method=loadInitPage))
@@ -664,76 +687,85 @@ for row in a['list']:  # list 키 안에 rcp_no, rpt_nm 등의 값들이 들어�
     balance_sheet_list.append(scrape_balance_sheet(balance_table, year, unit[0]))
     income_sheet_list.append(scrape_income_sheet(income_table, year, unit[1]))
     cashflow_sheet_list.append(scrape_cashflow_sheet(cashflow_table, year, unit[2]))
-# write_fs_to_excel(balance_sheet_list)
+sheet_list.append(balance_sheet_list)
+sheet_list.append(income_sheet_list)
+sheet_list.append(cashflow_sheet_list)
+write_fs_to_excel(sheet_list, company_name)
 
-balance_sheet_list.reverse()  # 년도 순으로 재배열
-# 만들고자하는 데이터프레임의 행의 항목 설정
-balance_rows = ["결산년도", "유동자산", "현금 및 현금성 자산", "매출채권", '재고자산', '비유동자산', '유형자산', '무형자산', '자산총계', '유동부채', '단기매입채무', '단기차입금', '비유동부채', '사채', '장기차입금', '장기매입채무', '이연법인세부채', '부채총계', '지배기업 소유지분', '비지배지분', '자본금', '주식발행초과금', '자본잉여금', '이익잉여금', '자본총계' ]
-# balance_columns = [None] * len(balance_sheet_list)
-balance_columns = [] # 데이터프레임의 열항목 설정
-
-for i in range(len(balance_sheet_list)):  # 데이터프레임에 들어갈 열 개수 설정
-    # print(i)
-    balance_columns.append(i)
-
-df_balance = pd.DataFrame(index=balance_rows, columns=balance_columns)  # 행, 열 기준으로 데이터프레임 생성
-# 데이터프레임에 값 채워넣기
-i = 0
-for index in balance_sheet_list:    # 대차대조표 년도 별 반복문 생성 index는 년도별 데이터 전체임
-    j = 0
-    for key in balance_sheet_list[i]:   # 각 년도별 데이터안에서 항목별 데이터에 접근
-        df_balance.iloc[j][i] = balance_sheet_list[i][key]  # iloc 이용해서 데이터프레임에 각 년도에 따른 항목데이터값 넣기
-        j += 1
-    i += 1
-
-writer = pd.ExcelWriter("F:\study\주식\재무제표\\"+company_name+".xlsx", engine='xlsxwriter')
-df_balance.to_excel(writer, sheet_name="balance sheet", header=False)
-
-
-income_sheet_list.reverse()  # 년도 순으로 재배열
-# 만들고자하는 데이터프레임의 행의 항목 설정
-income_rows = ["결산년도", "매출액", "매출원가", "매출총이익", '판매비와관리비', '영업이익', '기타수익', '기타비용', '금융수익', '금융비용', '법인세비용차감전순이익', '법인세비용', '당기순이익', '기본주당이익', '보통주주당이익', '우선주주당이익']
-# balance_columns = [None] * len(balance_sheet_list)
-income_columns = [] # 데이터프레임의 열항목 설정
-
-for i in range(len(income_sheet_list)):  # 데이터프레임에 들어갈 열 개수 설정
-    # print(i)
-    income_columns.append(i)
-
-df_income = pd.DataFrame(index=income_rows, columns=income_columns)  # 행, 열 기준으로 데이터프레임 생성
-# 데이터프레임에 값 채워넣기
-i = 0
-for index in income_sheet_list:    # 대차대조표 년도 별 반복문 생성 index는 년도별 데이터 전체임
-    j = 0
-    for key in income_sheet_list[i]:   # 각 년도별 데이터안에서 항목별 데이터에 접근
-        df_income.iloc[j][i] = income_sheet_list[i][key]  # iloc 이용해서 데이터프레임에 각 년도에 따른 항목데이터값 넣기
-        j += 1
-    i += 1
-
+# balance_sheet_list.reverse()  # 년도 순으로 재배열
+# # 만들고자하는 데이터프레임의 행의 항목 설정
+# balance_rows = ["결산년도", "유동자산", "현금 및 현금성 자산", "매출채권", '재고자산', '비유동자산', '유형자산', '무형자산', '자산총계', '유동부채', '단기매입채무', '단기차입금', '비유동부채', '사채', '장기차입금', '장기매입채무', '이연법인세부채', '부채총계', '지배기업 소유지분', '비지배지분', '자본금', '주식발행초과금', '자본잉여금', '이익잉여금', '자본총계' ]
+# # balance_columns = [None] * len(balance_sheet_list)
+# balance_columns = []  # 데이터프레임의 열항목 설정
+#
+# for i in range(len(balance_sheet_list)):  # 데이터프레임에 들어갈 열 개수 설정
+#     # print(i)
+#     balance_columns.append(i)
+#
+# df_balance = pd.DataFrame(index=balance_rows, columns=balance_columns)  # 행, 열 기준으로 데이터프레임 생성
+# # 데이터프레임에 값 채워넣기
+# i = 0
+# for index in balance_sheet_list:    # 대차대조표 년도 별 반복문 생성 index는 년도별 데이터 전체임
+#     j = 0
+#     for key in balance_sheet_list[i]:   # 각 년도별 데이터안에서 항목별 데이터에 접근
+#         df_balance.iloc[j][i] = balance_sheet_list[i][key]  # iloc 이용해서 데이터프레임에 각 년도에 따른 항목데이터값 넣기
+#         j += 1
+#     i += 1
+#
 # writer = pd.ExcelWriter("F:\study\주식\재무제표\\"+company_name+".xlsx", engine='xlsxwriter')
-df_income.to_excel(writer, sheet_name="income sheet", header=False)
+# df_balance.to_excel(writer, sheet_name="balance sheet", header=False)
+#
+#
+# income_sheet_list.reverse()  # 년도 순으로 재배열
+# # 만들고자하는 데이터프레임의 행의 항목 설정
+# income_rows = ["결산년도", "매출액", "매출원가", "매출총이익", '판매비와관리비', '영업이익', '기타수익', '기타비용', '금융수익', '금융비용', '법인세비용차감전순이익', '법인세비용', '당기순이익', '기본주당이익', '보통주주당이익', '우선주주당이익']
+# # balance_columns = [None] * len(balance_sheet_list)
+# income_columns = [] # 데이터프레임의 열항목 설정
+#
+# for i in range(len(income_sheet_list)):  # 데이터프레임에 들어갈 열 개수 설정
+#     # print(i)
+#     income_columns.append(i)
+#
+# df_income = pd.DataFrame(index=income_rows, columns=income_columns)  # 행, 열 기준으로 데이터프레임 생성
+# # 데이터프레임에 값 채워넣기
+# i = 0
+# for index in income_sheet_list:    # 대차대조표 년도 별 반복문 생성 index는 년도별 데이터 전체임
+#     j = 0
+#     for key in income_sheet_list[i]:   # 각 년도별 데이터안에서 항목별 데이터에 접근
+#         df_income.iloc[j][i] = income_sheet_list[i][key]  # iloc 이용해서 데이터프레임에 각 년도에 따른 항목데이터값 넣기
+#         j += 1
+#     i += 1
+#
+# # writer = pd.ExcelWriter("F:\study\주식\재무제표\\"+company_name+".xlsx", engine='xlsxwriter')
+# df_income.to_excel(writer, sheet_name="income sheet", header=False)
+#
+#
+#
+# cashflow_sheet_list.reverse()  # 년도 순으로 재배열
+# # 만들고자하는 데이터프레임의 행의 항목 설정
+# cashflow_rows = ["결산년도", "영업활동현금흐름", "영업에서창출된현금", "당기순이익", "투자활동으로인한현금흐름", '투자활동으로인한 현금유입액', '투자활동으로인한 현금유출액', '재무활동현금흐름', '배당금지급', '현금및현금성자산의순증가', '기초현금및현금성자산', '기말현금및현금성자산']
+# # balance_columns = [None] * len(balance_sheet_list)
+# cashflow_columns = [] # 데이터프레임의 열항목 설정
+#
+# for i in range(len(cashflow_sheet_list)):  # 데이터프레임에 들어갈 열 개수 설정
+#     # print(i)
+#     cashflow_columns.append(i)
+#
+# df_cashflow = pd.DataFrame(index=cashflow_rows, columns=cashflow_columns)  # 행, 열 기준으로 데이터프레임 생성
+# # 데이터프레임에 값 채워넣기
+# i = 0
+# for index in cashflow_sheet_list:    # 대차대조표 년도 별 반복문 생성 index는 년도별 데이터 전체임
+#     j = 0
+#     for key in cashflow_sheet_list[i]:   # 각 년도별 데이터안에서 항목별 데이터에 접근
+#         df_cashflow.iloc[j][i] = cashflow_sheet_list[i][key]  # iloc 이용해서 데이터프레임에 각 년도에 따른 항목데이터값 넣기
+#         j += 1
+#     i += 1
+#
+# # writer = pd.ExcelWriter("F:\study\주식\재무제표\\"+company_name+".xlsx", engine='xlsxwriter')
+# df_cashflow.to_excel(writer, sheet_name="cashflow sheet", header=False)
 
-
-
-cashflow_sheet_list.reverse()  # 년도 순으로 재배열
-# 만들고자하는 데이터프레임의 행의 항목 설정
-cashflow_rows = ["영업활동현금흐름", "영업에서창출된현금", "당기순이익", "투자활동으로인한현금흐름", '투자활동으로인한 현금유입액', '투자활동으로인한 현금유출액', '재무활동현금흐름', '배당금지급', '현금및현금성자산의순증가', '기초현금및현금성자산', '기말현금및현금성자산']
-# balance_columns = [None] * len(balance_sheet_list)
-cashflow_columns = [] # 데이터프레임의 열항목 설정
-
-for i in range(len(cashflow_sheet_list)):  # 데이터프레임에 들어갈 열 개수 설정
-    # print(i)
-    cashflow_columns.append(i)
-
-df_cashflow = pd.DataFrame(index=cashflow_rows, columns=cashflow_columns)  # 행, 열 기준으로 데이터프레임 생성
-# 데이터프레임에 값 채워넣기
-i = 0
-for index in cashflow_sheet_list:    # 대차대조표 년도 별 반복문 생성 index는 년도별 데이터 전체임
-    j = 0
-    for key in cashflow_sheet_list[i]:   # 각 년도별 데이터안에서 항목별 데이터에 접근
-        df_cashflow.iloc[j][i] = cashflow_sheet_list[i][key]  # iloc 이용해서 데이터프레임에 각 년도에 따른 항목데이터값 넣기
-        j += 1
-    i += 1
-
-# writer = pd.ExcelWriter("F:\study\주식\재무제표\\"+company_name+".xlsx", engine='xlsxwriter')
-df_cashflow.to_excel(writer, sheet_name="cashflow sheet", header=False)
+# 요약
+# 1. 회사명을 입력하면 종목코드 검색(엑셀파일로부터) 및 dart 사이트의 url 조건 맞춤
+# 2. url 조건을 바탕으로 사업보고서 조회
+# 3. 정규표현식을 통해 필요한 재무제표의 항목의 값(금액) 가져와 리스트에 담기
+# 4. 가져온 리스트를 데이터프레임으로 변환 후 엑셀로 저장
